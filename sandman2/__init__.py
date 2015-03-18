@@ -125,7 +125,6 @@ def _reflect_all(exclude_tables=None, admin=None):
         register_model(cls, admin)
 
 
-
 def register_model(cls, admin=None):
     """Register *cls* to be included in the API service
 
