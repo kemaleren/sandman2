@@ -5,6 +5,7 @@ import hashlib
 from flask import jsonify, request, make_response
 
 from sandman2.exception import BadRequestException
+from sandman2.resource_names import do_dasherize, dict_underize
 
 
 def etag(func):
@@ -59,6 +60,8 @@ def validate_fields(func):
     def decorated(instance, *args, **kwargs):
         """The decorator function."""
         data = request.get_json(force=True, silent=True)
+        if do_dasherize:
+            data = dict_underize(data)
         if not data:
             raise BadRequestException('No data received from request')
         for key in data:

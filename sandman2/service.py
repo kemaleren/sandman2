@@ -10,7 +10,8 @@ from flask.views import MethodView
 from sandman2.exception import NotFoundException, BadRequestException
 from sandman2.model import db
 from sandman2.decorators import etag, validate_fields
-from sandman2.resource_names import singular, plural, do_dasherize, dict_dasherize
+from sandman2.resource_names import singular, plural, do_dasherize
+from sandman2.resource_names import dict_dasherize, dict_underize
 
 
 def add_link_headers(response, links):
@@ -38,8 +39,11 @@ def jsonify(resource, envelope=None, add_headers=True):
     links = None
     if add_headers:
         links = resource.links()
+    # FIXME: this is a hack
+    if hasattr(resource, 'to_dict'):
+        resource = resource.to_dict()
     if envelope:
-        resource = {envelope: resource.to_dict()}
+        resource = {envelope: resource}
     if do_dasherize:
         resource = dict_dasherize(resource)
     response = flask.jsonify(resource)
@@ -109,8 +113,8 @@ class Service(MethodView):
             error_message = is_valid_method(self.__model__)
             if error_message:
                 raise BadRequestException(error_message)
-            return flask.jsonify(self._all_resources(), self.plural(),
-                                 add_headers=False)
+            return jsonify(self._all_resources(), self.plural(),
+                           add_headers=False)
         else:
             resource = self._resource(resource_id)
             error_message = is_valid_method(self.__model__, resource)
@@ -130,7 +134,10 @@ class Service(MethodView):
         error_message = is_valid_method(self.__model__, resource)
         if error_message:
             raise BadRequestException(error_message)
-        resource.update(request.json)
+        json = request.json
+        if do_dasherize:
+            json = dict_underize(json)
+        resource.update(json)
         db.session().merge(resource)
         db.session().commit()
         return jsonify(resource, self.singular())
@@ -144,14 +151,17 @@ class Service(MethodView):
         :returns: ``HTTP 204`` if the resource already exists
         :returns: ``HTTP 400`` if the request is malformed or missing data
         """
-        resource = self.__model__.query.filter_by(**request.json).first()
+        json = request.json
+        if do_dasherize:
+            json = dict_underize(json)
+        resource = self.__model__.query.filter_by(**json).first()
         if resource:
             error_message = is_valid_method(self.__model__, resource)
             if error_message:
                 raise BadRequestException(error_message)
             return self._no_content_response()
 
-        resource = self.__model__(**request.json)  # pylint: disable=not-callable
+        resource = self.__model__(**json)  # pylint: disable=not-callable
         error_message = is_valid_method(self.__model__, resource)
         if error_message:
             raise BadRequestException(error_message)
@@ -173,17 +183,21 @@ class Service(MethodView):
         :returns: ``HTTP 400`` if the request is malformed or missing data
         :returns: ``HTTP 404`` if the resource is not found
         """
+        json = request.json
+        if do_dasherize:
+            json = dict_underize(json)
+
         resource = self.__model__.query.get(resource_id)
         if resource:
             error_message = is_valid_method(self.__model__, resource)
             if error_message:
                 raise BadRequestException(error_message)
-            resource.update(request.json)
+            resource.update(json)
             db.session().merge(resource)
             db.session().commit()
             return jsonify(resource, self.singular())
 
-        resource = self.__model__(**request.json)  # pylint: disable=not-callable
+        resource = self.__model__(json)  # pylint: disable=not-callable
         error_message = is_valid_method(self.__model__, resource)
         if error_message:
             raise BadRequestException(error_message)
@@ -230,8 +244,7 @@ class Service(MethodView):
         response.status_code = 204
         return response
 
-    @staticmethod
-    def _created_response(resource):
+    def _created_response(self, resource):
         """Return an HTTP 201 "Created" response.
 
         :returns: HTTP Response
