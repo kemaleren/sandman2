@@ -21,6 +21,8 @@ from sandman2.model import db, Model
 from sandman2.admin import CustomAdminView
 from flask.ext.admin import Admin
 
+from sandman2.resource_names import plural
+
 __version__ = '0.0.4.1'
 
 # Augment sandman2's Model class with the Automap and Flask-SQLAlchemy model
@@ -123,12 +125,13 @@ def _reflect_all(exclude_tables=None, admin=None):
         register_model(cls, admin)
 
 
+
 def register_model(cls, admin=None):
     """Register *cls* to be included in the API service
 
     :param cls: Class deriving from :class:`sandman2.models.Model`
     """
-    cls.__url__ = '/{}'.format(cls.__name__.lower())
+    cls.__url__ = '/{}'.format(plural(cls.__name__))
     service_class = type(
         cls.__name__ + 'Service',
         (Service,),

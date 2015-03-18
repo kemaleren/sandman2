@@ -10,6 +10,7 @@ from flask.views import MethodView
 from sandman2.exception import NotFoundException, BadRequestException
 from sandman2.model import db
 from sandman2.decorators import etag, validate_fields
+from sandman2.resource_names import singular, plural, do_dasherize, dict_dasherize
 
 
 def add_link_headers(response, links):
@@ -28,15 +29,22 @@ def add_link_headers(response, links):
     return response
 
 
-def jsonify(resource):
+def jsonify(resource, envelope=None, add_headers=True):
     """Return a Flask ``Response`` object containing a
     JSON representation of *resource*.
 
     :param resource: The resource to act as the basis of the response
     """
-
-    response = flask.jsonify(resource.to_dict())
-    response = add_link_headers(response, resource.links())
+    links = None
+    if add_headers:
+        links = resource.links()
+    if envelope:
+        resource = {envelope: resource.to_dict()}
+    if do_dasherize:
+        resource = dict_dasherize(resource)
+    response = flask.jsonify(resource)
+    if add_headers:
+        response = add_link_headers(response, links)
     return response
 
 
@@ -65,6 +73,12 @@ class Service(MethodView):
     #: The string used to describe the elements when a collection is
     #: returned.
     __json_collection_name__ = 'resources'
+
+    def singular(self):
+        return singular(self.__model__.__name__)
+
+    def plural(self):
+        return plural(self.__model__.__name__)
 
     def delete(self, resource_id):
         """Return an HTTP response object resulting from a HTTP DELETE call.
@@ -95,16 +109,14 @@ class Service(MethodView):
             error_message = is_valid_method(self.__model__)
             if error_message:
                 raise BadRequestException(error_message)
-
-            return flask.jsonify({
-                self.__json_collection_name__: self._all_resources()
-                })
+            return flask.jsonify(self._all_resources(), self.plural(),
+                                 add_headers=False)
         else:
             resource = self._resource(resource_id)
             error_message = is_valid_method(self.__model__, resource)
             if error_message:
                 raise BadRequestException(error_message)
-            return jsonify(resource)
+            return jsonify(resource, self.singular())
 
     def patch(self, resource_id):
         """Return an HTTP response object resulting from an HTTP PATCH call.
@@ -121,7 +133,7 @@ class Service(MethodView):
         resource.update(request.json)
         db.session().merge(resource)
         db.session().commit()
-        return jsonify(resource)
+        return jsonify(resource, self.singular())
 
     @validate_fields
     def post(self):
@@ -169,7 +181,7 @@ class Service(MethodView):
             resource.update(request.json)
             db.session().merge(resource)
             db.session().commit()
-            return jsonify(resource)
+            return jsonify(resource, self.singular())
 
         resource = self.__model__(**request.json)  # pylint: disable=not-callable
         error_message = is_valid_method(self.__model__, resource)
@@ -224,6 +236,6 @@ class Service(MethodView):
 
         :returns: HTTP Response
         """
-        response = jsonify(resource)
+        response = jsonify(resource, self.singular())
         response.status_code = 201
         return response
