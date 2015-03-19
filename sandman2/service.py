@@ -1,6 +1,8 @@
 """Automatically generated REST API services from SQLAlchemy
 ORM models or a database introspection."""
 
+import datetime
+
 # Third-party imports
 from flask import request, make_response
 import flask
@@ -30,6 +32,15 @@ def add_link_headers(response, links):
     return response
 
 
+def do_isoformat(d):
+    for k, v in d.items():
+        if isinstance(v, (datetime.date, datetime.time)):
+            d[k] = v.isoformat()
+        elif isinstance(v, dict):
+            d[k] = do_isoformat(v)
+    return d
+
+
 def jsonify(resource, envelope=None, add_headers=True):
     """Return a Flask ``Response`` object containing a
     JSON representation of *resource*.
@@ -46,6 +57,8 @@ def jsonify(resource, envelope=None, add_headers=True):
         resource = {envelope: resource}
     if do_dasherize:
         resource = dict_dasherize(resource)
+    # FIXME: another hack
+    resource = do_isoformat(resource)
     response = flask.jsonify(resource)
     if add_headers:
         response = add_link_headers(response, links)
