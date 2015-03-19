@@ -1,5 +1,7 @@
 """*sandman2*'s main module."""
 
+import warnings
+
 # Third-party imports
 from flask import Flask, current_app, jsonify
 from sqlalchemy.ext.automap import automap_base
@@ -112,6 +114,18 @@ def register_service(cls, primary_key_type='int'):
         methods=methods - set(['POST']))
 
 
+def name_for_scalar_relationship(base, local_cls, referred_cls, constraint):
+    name = referred_cls.__name__.lower()
+    local_table = local_cls.__table__
+    if name in local_table.columns:
+        newname = name + "_"
+        warnings.warn(
+            "Already detected name %s present.  using %s" %
+            (name, newname))
+        return newname
+    return name
+
+
 def _reflect_all(exclude_tables=None, admin=None):
     """Register all tables in the given database as services.
 
@@ -119,7 +133,8 @@ def _reflect_all(exclude_tables=None, admin=None):
                                 service
     """
     AutomapModel.prepare(  # pylint:disable=maybe-no-member
-        db.engine, reflect=True)
+        db.engine, reflect=True,
+        name_for_scalar_relationship=name_for_scalar_relationship)
     for cls in AutomapModel.classes:
         if exclude_tables and cls.__table__.name in exclude_tables:
             continue
