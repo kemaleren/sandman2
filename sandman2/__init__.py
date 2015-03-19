@@ -32,22 +32,23 @@ AutomapModel = automap_base(Model)
 
 
 def get_app(
-        database_uri,
+        config_env_var,
         exclude_tables=None,
         user_models=None,
-        reflect_all=True):
+        reflect_all=True,
+        static_url_path=None):
     """Return an application instance connected to the database described in
-    *database_uri*.
+    the file at  *config_env_var*.
 
-    :param str database_uri: The URI connection string for the database
+    :param str config_env_var: Environment variable pointing to configuration file
     :param list exclude_tables: A list of tables to exclude from the API
                                 service
     :param list user_models: A list of user-defined models to include in the
                              API service
     :param bool reflect_all: Include all database tables in the API service
     """
-    app = Flask('sandman2')
-    app.config['SQLALCHEMY_DATABASE_URI'] = database_uri
+    app = Flask('strengthlog', static_url_path=static_url_path)
+    app.config.from_envvar(config_env_var)
     db.init_app(app)
     admin = Admin(app, base_template='layout.html')
     _register_error_handlers(app)
