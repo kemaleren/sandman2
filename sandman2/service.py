@@ -12,8 +12,7 @@ from flask.views import MethodView
 from sandman2.exception import NotFoundException, BadRequestException
 from sandman2.model import db
 from sandman2.decorators import etag, validate_fields
-from sandman2.resource_names import singular, plural, do_dasherize
-from sandman2.resource_names import dict_dasherize, dict_underize
+from sandman2.resource_names import singular, plural
 
 
 def add_link_headers(response, links):
@@ -55,8 +54,6 @@ def jsonify(resource, envelope=None, add_headers=True):
         resource = resource.to_dict()
     if envelope:
         resource = {envelope: resource}
-    if do_dasherize:
-        resource = dict_dasherize(resource)
     # FIXME: another hack
     resource = do_isoformat(resource)
     response = flask.jsonify(resource)
@@ -148,8 +145,6 @@ class Service(MethodView):
         if error_message:
             raise BadRequestException(error_message)
         json = request.json
-        if do_dasherize:
-            json = dict_underize(json)
         resource.update(json)
         db.session().merge(resource)
         db.session().commit()
@@ -165,8 +160,6 @@ class Service(MethodView):
         :returns: ``HTTP 400`` if the request is malformed or missing data
         """
         json = request.json
-        if do_dasherize:
-            json = dict_underize(json)
         resource = self.__model__.query.filter_by(**json).first()
         if resource:
             error_message = is_valid_method(self.__model__, resource)
@@ -197,9 +190,6 @@ class Service(MethodView):
         :returns: ``HTTP 404`` if the resource is not found
         """
         json = request.json
-        if do_dasherize:
-            json = dict_underize(json)
-
         resource = self.__model__.query.get(resource_id)
         if resource:
             error_message = is_valid_method(self.__model__, resource)
