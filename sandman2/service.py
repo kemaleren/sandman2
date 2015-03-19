@@ -32,11 +32,14 @@ def add_link_headers(response, links):
 
 
 def do_isoformat(d):
-    for k, v in d.items():
-        if isinstance(v, (datetime.date, datetime.time)):
-            d[k] = v.isoformat()
-        elif isinstance(v, dict):
+    # hack to make datetime objects serializable
+    if isinstance(d, dict):
+        for k, v in d.items():
             d[k] = do_isoformat(v)
+    elif isinstance(d, (datetime.date, datetime.time)):
+        return d.isoformat()
+    elif hasattr(d, '__iter__') and not isinstance(d, str):
+        return list(do_isoformat(elt) for elt in  d)
     return d
 
 
