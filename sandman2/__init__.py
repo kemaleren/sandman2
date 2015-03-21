@@ -146,7 +146,7 @@ def register_model(cls, admin=None):
 
     :param cls: Class deriving from :class:`sandman2.models.Model`
     """
-    cls.__url__ = '/{}'.format(plural(cls.__name__))
+    cls.__url__ = '/api/v1/{}'.format(plural(cls.__name__))
     service_class = type(
         cls.__name__ + 'Service',
         (Service,),
