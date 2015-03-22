@@ -17,3 +17,7 @@ def singular(name):
 
 def plural(name):
     return _make_name(name, True)
+
+
+def dasherize(name):
+    return name.replace("_", "-")

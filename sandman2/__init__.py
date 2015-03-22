@@ -23,7 +23,7 @@ from sandman2.model import db, Model
 from sandman2.admin import CustomAdminView
 from flask.ext.admin import Admin
 
-from sandman2.resource_names import plural
+from sandman2.resource_names import plural, dasherize
 
 __version__ = '0.0.4.1'
 
@@ -146,7 +146,7 @@ def register_model(cls, admin=None):
 
     :param cls: Class deriving from :class:`sandman2.models.Model`
     """
-    cls.__url__ = '/api/v1/{}'.format(plural(cls.__name__))
+    cls.__url__ = '/api/v1/{}'.format(plural(dasherize(cls.__name__)))
     service_class = type(
         cls.__name__ + 'Service',
         (Service,),

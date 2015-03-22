@@ -2,5 +2,5 @@
 # main project.
 
 custom_names = {
-    'log_entry': ('log-entry', 'log-entries'),
+    'log-entry': ('log-entry', 'log-entries'),
 }
